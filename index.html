@@ -419,16 +419,15 @@
       if (e.layerType === "marker") kind = "marker";
 
       const name = prompt(kind === "flaeche" ? "Name der Fläche (z.B. Feld 1):" : "Name der Markierung (z.B. Stall):") || "";
-      const geojson = layer.toGeoJSON();
+     const geojson = JSON.parse(JSON.stringify(layer.toGeoJSON()));
+
 
       await addDoc(featuresCol(), {
         kind,
         name: name.trim(),
-        geojson,
+        geojson: JSON.parse(JSON.stringify(geojson)),
         createdAt: serverTimestamp()
       });
-    });
-
     // When edited in map -> update Firestore
     map.on(L.Draw.Event.EDITED, async (e) => {
       if (!FARM) return;
