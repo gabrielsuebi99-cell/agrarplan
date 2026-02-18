@@ -1,606 +1,149 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AgrarPlan Pro – Sync • Karte • Kalender</title>
-
-  <!-- Leaflet + Draw -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
-
-  <!-- FullCalendar -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
-
-  <style>
-    :root{
-      --bg:#f4f6f5; --card:#fff; --side:#163526; --side2:#24533b; --txt:#0d1b12;
-      --muted: rgba(0,0,0,.65);
-    }
-    *{ box-sizing:border-box; }
-    body{ margin:0; font-family: Arial, system-ui; background:var(--bg); color:var(--txt); height:100vh; display:flex; }
-    .sidebar{ width:260px; background:var(--side); color:#fff; padding:16px; }
-    .sidebar h1{ font-size:18px; margin:0 0 8px; }
-    .sidebar small{ opacity:.85; display:block; margin-bottom:10px; }
-    .navbtn{
-      width:100%; padding:10px 12px; border:0; border-radius:12px;
-      background:var(--side2); color:#fff; cursor:pointer; margin-top:8px; text-align:left;
-    }
-    .navbtn:hover{ filter:brightness(1.08); }
-    .content{ flex:1; padding:18px; overflow:auto; }
-    .warn{
-      background:#fff3cd; border:1px solid #ffe69c; padding:10px; border-radius:12px; margin-bottom:12px;
-    }
-    .topbar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-    .topbar input{ flex:1; min-width:240px; }
-    section{ background:var(--card); border-radius:14px; padding:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); }
-    section.hide{ display:none; }
-    h2{ margin:0 0 10px; font-size:18px; }
-    .row{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
-    .card{ background:#fff; border-radius:14px; padding:14px; box-shadow:0 2px 10px rgba(0,0,0,.05); }
-    input, select, textarea{
-      width:100%; padding:10px; border-radius:12px; border:1px solid #d8e0db; margin:6px 0;
-    }
-    textarea{ min-height:90px; resize:vertical; }
-    .task{ border-left:6px solid #2c7a4b; padding:10px; border-radius:12px; background:#fbfcfb; margin-top:10px; }
-    .task.done{ opacity:.65; text-decoration:line-through; }
-    .meta{ font-size:13px; color:var(--muted); margin-top:6px; white-space:pre-wrap; }
-    .task button{ padding:8px 10px; border:0; border-radius:10px; cursor:pointer; margin-right:8px; }
-    .ok{ background:#dff3e7; }
-    .del{ background:#ffe2e2; }
-    #map{ height:540px; border-radius:14px; }
-    .list{ margin-top:10px; }
-    .list-item{
-      display:flex; gap:10px; align-items:center; justify-content:space-between;
-      padding:10px; border-radius:12px; background:#f7faf8; margin-top:8px;
-    }
-    .list-item .small{ font-size:12px; color:var(--muted); }
-    .list-item button{ padding:8px 10px; border:0; border-radius:10px; cursor:pointer; background:#ffe2e2; }
-    #cal{ background:#fff; border-radius:14px; padding:10px; }
-    .pill{ display:inline-block; padding:6px 10px; border-radius:999px; background:#e9f3ee; margin:4px 6px 0 0; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgrarPlanPro</title>
+<style>
+body{font-family:Arial;margin:0;background:#f4f6f9;}
+header{background:#2e7d32;color:white;padding:15px;font-size:20px;}
+.container{padding:20px;}
+input,select,button{padding:8px;margin:5px 0;}
+.task{background:white;padding:10px;margin:8px 0;border-radius:6px;}
+</style>
 </head>
-
 <body>
-  <div class="sidebar">
-    <h1>🌾 AgrarPlan Pro</h1>
-    <small>Live-Sync • Schweiz • Satellit • Flächen • Kalender</small>
 
-    <button class="navbtn" onclick="showView('dashboard')">📊 Dashboard</button>
-    <button class="navbtn" onclick="showView('tasks')">📋 Aufträge</button>
-    <button class="navbtn" onclick="showView('calendar')">📅 Kalender</button>
-    <button class="navbtn" onclick="showView('map')">🛰 Karte</button>
-    <button class="navbtn" onclick="showView('animals')">🐄 Tiere</button>
-    <button class="navbtn" onclick="showView('notes')">📝 Notizen</button>
-  </div>
+<header>AgrarPlanPro</header>
 
-  <div class="content">
-    <div class="warn">
-      <b>Wichtig:</b> Alle öffnen denselben Link <u>und</u> verwenden denselben <b>Betriebscode</b>. Dann sehen alle dieselben Daten.
-    </div>
+<div class="container">
 
-    <div class="topbar">
-      <input id="farmId" placeholder="Betriebscode (z.B. HOF-01)" />
-      <button class="navbtn" style="width:auto" onclick="applyFarm()">✅ Laden</button>
-      <button class="navbtn" style="width:auto" onclick="copyShareLink()">🔗 Link teilen</button>
-    </div>
+<h3>Betriebscode</h3>
+<input id="farmInput" placeholder="z.B. HOF-01">
+<button onclick="loadFarm()">Laden</button>
 
-    <!-- Dashboard -->
-    <section id="view-dashboard">
-      <h2>📊 Dashboard</h2>
-      <div class="row">
-        <div class="card" style="flex:1; min-width:240px;">
-          <h2>Aufträge</h2>
-          <div id="statTasks">–</div>
-        </div>
-        <div class="card" style="flex:1; min-width:240px;">
-          <h2>Karte</h2>
-          <div id="statMap">–</div>
-        </div>
-        <div class="card" style="flex:1; min-width:240px;">
-          <h2>Tiere</h2>
-          <div id="statAnimals">–</div>
-        </div>
-      </div>
-      <div class="card" style="margin-top:12px;">
-        <h2>Tipps für „Note 6“</h2>
-        <span class="pill">Live-Sync (Cloud)</span>
-        <span class="pill">Satellitenkarte + Flächen</span>
-        <span class="pill">Kalender (Monat/Woche/Tag)</span>
-        <span class="pill">Aufträge mit Details</span>
-        <span class="pill">Tier-Checklisten</span>
-      </div>
-    </section>
+<hr>
 
-    <!-- Tasks -->
-    <section id="view-tasks" class="hide">
-      <h2>📋 Aufträge</h2>
-      <div class="row">
-        <div class="card" style="flex:1; min-width:260px;">
-          <h2>➕ Neuer Auftrag</h2>
-          <input id="tTitle" placeholder="Titel (z.B. Stall ausmisten)" />
-          <input type="date" id="tDate" />
-          <input id="tWorker" placeholder="Person/Team (frei eingeben)" />
-          <input id="tPlace" placeholder="Ort (z.B. Stall / Feld 3 / Lager)" />
-          <select id="tPrio">
-            <option value="normal">Priorität: Normal</option>
-            <option value="hoch">Priorität: Hoch</option>
-            <option value="niedrig">Priorität: Niedrig</option>
-          </select>
-          <textarea id="tInfo" placeholder="Weitere Infos (Maschine, Material, Zeit, Hinweise)…"></textarea>
-          <button class="navbtn" onclick="createTask()">Speichern</button>
-        </div>
+<h3>Neuer Auftrag</h3>
+<input id="title" placeholder="Titel">
+<input id="date" type="date">
+<select id="prio">
+  <option value="normal">Normal</option>
+  <option value="hoch">Hoch</option>
+</select>
+<button onclick="addTask()">Speichern</button>
 
-        <div class="card" style="flex:2; min-width:300px;">
-          <h2>📌 Liste</h2>
-          <div id="taskList"></div>
-        </div>
-      </div>
-    </section>
+<hr>
 
-    <!-- Calendar -->
-    <section id="view-calendar" class="hide">
-      <h2>📅 Kalender</h2>
-      <div id="cal"></div>
-      <div class="meta" style="margin-top:8px;">
-        Tipp: Aufgaben mit Datum erscheinen automatisch im Kalender. Klick auf einen Termin → Details.
-      </div>
-    </section>
+<h3>Aufträge</h3>
+<div id="tasks"></div>
 
-    <!-- Map -->
-    <section id="view-map" class="hide">
-      <h2>🛰 Karte Schweiz (Satellit + Flächen)</h2>
-      <div class="row">
-        <div class="card" style="flex:2; min-width:320px;">
-          <div id="map"></div>
-          <div class="meta">
-            Zeichnen: Marker / Fläche (Polygon) über die Tools links oben.  
-            Löschen: über das Papierkorb-Tool ODER in der Liste rechts.
-          </div>
-        </div>
-        <div class="card" style="flex:1; min-width:260px;">
-          <h2>🧾 Objekte</h2>
-          <div id="featureList" class="list"></div>
-        </div>
-      </div>
-    </section>
+</div>
 
-    <!-- Animals -->
-    <section id="view-animals" class="hide">
-      <h2>🐄 Tiere & Aufgaben</h2>
-      <div class="row">
-        <div class="card" style="flex:1; min-width:260px;">
-          <h2>➕ Tiergruppe</h2>
-          <input id="aType" placeholder="Tierart (z.B. Kühe, Hühner, Pferde)" />
-          <textarea id="aTasks" placeholder="Was muss man machen? (Füttern, Wasser, Kontrolle, Stall…)"></textarea>
-          <button class="navbtn" onclick="addAnimal()">Speichern</button>
-        </div>
-        <div class="card" style="flex:2; min-width:300px;">
-          <h2>📌 Liste</h2>
-          <div id="animalList"></div>
-        </div>
-      </div>
-    </section>
+<script type="module">
 
-    <!-- Notes -->
-    <section id="view-notes" class="hide">
-      <h2>📝 Notizen</h2>
-      <textarea id="notesArea" placeholder="Allgemeine Notizen für den Betrieb…"></textarea>
-      <button class="navbtn" onclick="saveNotes()">Speichern</button>
-      <div class="meta">Notizen werden live geladen/gespeichert (bei gleichen Betriebscode).</div>
-    </section>
-  </div>
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import {
+  initializeFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  <!-- Libraries -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA7FgCpiflkQpnYcSuTh1q2aXpTfZXQ5vo",
+  authDomain: "agrarplanpro.firebaseapp.com",
+  projectId: "agrarplanpro",
+  storageBucket: "agrarplanpro.firebasestorage.app",
+  messagingSenderId: "793787909192",
+  appId: "1:793787909192:web:fac554aae83ba8431b847d"
+};
 
-  <!-- App -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import {
-      getFirestore, collection, doc, setDoc, addDoc, deleteDoc, updateDoc,
-      onSnapshot, query, orderBy, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+const app = initializeApp(firebaseConfig);
 
-    const $ = (id) => document.getElementById(id);
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false
+});
 
-    // ✅ HIER deine Firebase config einfügen (du kannst diese Werte schon so lassen, wenn sie genau stimmen)
-    const firebaseConfig = {
-      apiKey: "AIzaSyA7FgCpiflkQpnYcSuTh1q2aXpTfZXQ5vo",
-      authDomain: "agrarplanpro.firebaseapp.com",
-      projectId: "agrarplanpro",
-      storageBucket: "agrarplanpro.firebasestorage.app",
-      messagingSenderId: "793787909192",
-      appId: "1:793787909192:web:fac554aae83ba8431b847d"
-    };
+let FARM = null;
+let unsubscribe = null;
 
-    // ---------- Init Firebase ----------
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+function getFarmFromUrl(){
+  const params = new URLSearchParams(window.location.search);
+  return params.get("farm");
+}
 
-    // ---------- Navigation ----------
-    window.showView = (name) => {
-      for (const s of ["dashboard","tasks","calendar","map","animals","notes"]) {
-        $("view-"+s).classList.toggle("hide", s !== name);
-      }
-      if (name === "map") setTimeout(() => map.invalidateSize(), 150);
-    };
+window.loadFarm = function(){
+  const input = document.getElementById("farmInput").value;
+  if(!input){alert("Betriebscode eingeben!");return;}
+  FARM = input;
+  startListener();
+}
 
-    // ---------- Farm handling ----------
-    let FARM = "";
+function startListener(){
+  if(unsubscribe) unsubscribe();
 
-    function getFarmFromUrlOrStorage(){
-      const url = new URL(window.location.href);
-      const f = url.searchParams.get("farm") || localStorage.getItem("farmId") || "";
-      return (f || "").trim();
-    }
-    function setFarmToUrl(farm){
-      const url = new URL(window.location.href);
-      url.searchParams.set("farm", farm);
-      window.history.replaceState({}, "", url.toString());
-    }
+  const q = query(
+    collection(db,"farms",FARM,"tasks"),
+    orderBy("createdAt","desc")
+  );
 
-    window.applyFarm = () => {
-      const f = ($("farmId").value || "").trim();
-      if (!f) { alert("Bitte Betriebscode eingeben."); return; }
-      FARM = f;
-      localStorage.setItem("farmId", FARM);
-      setFarmToUrl(FARM);
-      startListeners();
-      alert("Betriebscode geladen: " + FARM);
-    };
-
-    window.copyShareLink = async () => {
-      if (!FARM) { alert("Erst Betriebscode laden."); return; }
-      const url = new URL(window.location.href);
-      url.searchParams.set("farm", FARM);
-      await navigator.clipboard.writeText(url.toString());
-      alert("Link kopiert! Sende ihn an andere (gleicher Betriebscode).");
-    };
-
-    // ---------- Firestore paths ----------
-    const tasksCol = () => collection(db, "farms", FARM, "tasks");
-    const animalsCol = () => collection(db, "farms", FARM, "animals");
-    const featuresCol = () => collection(db, "farms", FARM, "features");
-    const notesDoc = () => doc(db, "farms", FARM, "notes", "main");
-
-    // ---------- Tasks ----------
-    let tasks = [];
-
-    window.createTask = async () => {
-      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
-      const title = ($("tTitle").value || "").trim();
-      if (!title) return alert("Titel fehlt.");
-
-      await addDoc(tasksCol(), {
-        title,
-        date: $("tDate").value || "",
-        worker: ($("tWorker").value || "").trim(),
-        place: ($("tPlace").value || "").trim(),
-        prio: $("tPrio").value,
-        info: ($("tInfo").value || "").trim(),
-        done: false,
-        createdAt: serverTimestamp()
-      });
-
-      $("tTitle").value = "";
-      $("tInfo").value = "";
-    };
-
-    async function toggleTask(id, current){
-      await updateDoc(doc(db, "farms", FARM, "tasks", id), { done: !current });
-    }
-    async function removeTask(id){
-      await deleteDoc(doc(db, "farms", FARM, "tasks", id));
-    }
-
-    function escapeHtml(str){
-      return (str ?? "").toString()
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-
-    function renderTasks(){
-      const wrap = $("taskList");
-      wrap.innerHTML = "";
-
-      for (const t of tasks){
-        const div = document.createElement("div");
-        div.className = "task" + (t.done ? " done" : "");
-        div.innerHTML = `
-          <b>${escapeHtml(t.title)}</b>
-          <div class="meta">📅 ${escapeHtml(t.date || "—")} · 👤 ${escapeHtml(t.worker || "—")} · 📍 ${escapeHtml(t.place || "—")} · ⭐ ${escapeHtml(t.prio)}</div>
-          <div class="meta">ℹ️ ${escapeHtml(t.info || "")}</div>
-          <div style="margin-top:8px;">
-            <button class="ok" data-id="${t.id}">${t.done ? "Wieder offen" : "Erledigt"}</button>
-            <button class="del" data-del="${t.id}">Löschen</button>
-          </div>
-        `;
-        wrap.appendChild(div);
-      }
-
-      wrap.querySelectorAll("button.ok").forEach(b=>{
-        b.onclick = ()=> {
-          const id = b.getAttribute("data-id");
-          const t = tasks.find(x=>x.id===id);
-          if (t) toggleTask(id, t.done);
-        };
-      });
-      wrap.querySelectorAll("button.del").forEach(b=>{
-        b.onclick = ()=> removeTask(b.getAttribute("data-del"));
-      });
-
-      const done = tasks.filter(t=>t.done).length;
-      $("statTasks").innerHTML = `Gesamt: <b>${tasks.length}</b><br>Erledigt: <b>${done}</b><br>Offen: <b>${tasks.length - done}</b>`;
-
-      refreshCalendar();
-    }
-
-    // ---------- Notes ----------
-    window.saveNotes = async () => {
-      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
-      await setDoc(notesDoc(), { text: $("notesArea").value || "", updatedAt: serverTimestamp() }, { merge: true });
-      alert("Notizen gespeichert.");
-    };
-
-    // ---------- Animals ----------
-    let animals = [];
-
-    window.addAnimal = async () => {
-      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
-      const type = ($("aType").value || "").trim();
-      if (!type) return alert("Tierart fehlt.");
-
-      await addDoc(animalsCol(), {
-        type,
-        tasks: ($("aTasks").value || "").trim(),
-        createdAt: serverTimestamp()
-      });
-
-      $("aType").value = "";
-      $("aTasks").value = "";
-    };
-
-    async function removeAnimal(id){
-      await deleteDoc(doc(db, "farms", FARM, "animals", id));
-    }
-
-    function renderAnimals(){
-      const wrap = $("animalList");
-      wrap.innerHTML = "";
-
-      for (const a of animals){
-        const div = document.createElement("div");
-        div.className = "list-item";
-        div.innerHTML = `
-          <div>
-            <b>${escapeHtml(a.type)}</b>
-            <div class="small">${escapeHtml(a.tasks || "")}</div>
-          </div>
-          <button data-del="${a.id}">Löschen</button>
-        `;
-        wrap.appendChild(div);
-      }
-      wrap.querySelectorAll("button[data-del]").forEach(b=>{
-        b.onclick = ()=> removeAnimal(b.getAttribute("data-del"));
-      });
-
-      $("statAnimals").innerHTML = `Tiergruppen: <b>${animals.length}</b>`;
-    }
-
-    // ---------- Map (Switzerland + Satellite + Draw + Delete) ----------
-    const map = L.map("map", { preferCanvas:true }).setView([46.8, 8.3], 8);
-
-    // Esri World Imagery (satellite-like)
-    const sat = L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 19, attribution: "Tiles © Esri" }
-    ).addTo(map);
-
-    // Labels overlay (optional)
-    const labels = L.tileLayer(
-      "https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 19, attribution: "Labels © Esri" }
-    ).addTo(map);
-
-    const drawn = new L.FeatureGroup();
-    map.addLayer(drawn);
-
-    const drawControl = new L.Control.Draw({
-      edit: { featureGroup: drawn, remove: true },
-      draw: { polyline:false, rectangle:false, circle:false, circlemarker:false }
+  unsubscribe = onSnapshot(q,(snapshot)=>{
+    const container = document.getElementById("tasks");
+    container.innerHTML = "";
+    snapshot.forEach(docSnap=>{
+      const data = docSnap.data();
+      const div = document.createElement("div");
+      div.className="task";
+      div.innerHTML = `
+        <b>${data.title}</b><br>
+        Datum: ${data.date}<br>
+        Priorität: ${data.prio}<br>
+        <button onclick="deleteTask('${docSnap.id}')">Löschen</button>
+      `;
+      container.appendChild(div);
     });
-    map.addControl(drawControl);
+  });
+}
 
-    let features = [];
+window.addTask = async function(){
+  if(!FARM){alert("Zuerst Betrieb laden!");return;}
 
-    function clearDrawn(){ drawn.clearLayers(); }
+  const title=document.getElementById("title").value;
+  const date=document.getElementById("date").value;
+  const prio=document.getElementById("prio").value;
 
-    function addFeatureToMap(featureDoc){
-      // IMPORTANT: geojsonStr is stored as string, then parsed here
-      const gj = JSON.parse(featureDoc.geojsonStr);
-      const layerGroup = L.geoJSON(gj);
+  if(!title){alert("Titel fehlt");return;}
 
-      layerGroup.eachLayer(l => {
-        // store feature id on layer so edit/delete can sync back to Firestore
-        l.options._fid = featureDoc.id;
-        l.bindPopup(`<b>${escapeHtml(featureDoc.name || "")}</b><br>${escapeHtml(featureDoc.kind)}`);
-        drawn.addLayer(l);
-      });
-    }
+  await addDoc(collection(db,"farms",FARM,"tasks"),{
+    title,
+    date,
+    prio,
+    done:false,
+    createdAt: serverTimestamp()
+  });
 
-    function renderFeatureList(){
-      const wrap = $("featureList");
-      wrap.innerHTML = "";
+  document.getElementById("title").value="";
+}
 
-      for (const f of features){
-        const div = document.createElement("div");
-        div.className = "list-item";
-        div.innerHTML = `
-          <div>
-            <b>${escapeHtml(f.name || f.kind)}</b>
-            <div class="small">${escapeHtml(f.kind)} · ID: ${escapeHtml(f.id)}</div>
-          </div>
-          <button data-del="${f.id}">Löschen</button>
-        `;
-        wrap.appendChild(div);
-      }
+window.deleteTask = async function(id){
+  await deleteDoc(doc(db,"farms",FARM,"tasks",id));
+}
 
-      wrap.querySelectorAll("button[data-del]").forEach(b=>{
-        b.onclick = ()=> deleteDoc(doc(db, "farms", FARM, "features", b.getAttribute("data-del")));
-      });
+const initialFarm = getFarmFromUrl();
+if(initialFarm){
+  document.getElementById("farmInput").value=initialFarm;
+  FARM=initialFarm;
+  startListener();
+}
 
-      $("statMap").innerHTML = `Objekte: <b>${features.length}</b>`;
-    }
+</script>
 
-    map.on(L.Draw.Event.CREATED, async (e) => {
-      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
-
-      const layer = e.layer;
-
-      let kind = "marker";
-      if (e.layerType === "polygon") kind = "flaeche";
-      if (e.layerType === "marker") kind = "marker";
-
-      const name = prompt(kind === "flaeche" ? "Name der Fläche (z.B. Feld 1):" : "Name der Markierung (z.B. Stall):") || "";
-
-      // ✅ store as STRING (fix for Firestore nested arrays issue)
-      const geojsonStr = JSON.stringify(layer.toGeoJSON());
-
-      await addDoc(featuresCol(), {
-        kind,
-        name: (name || "").trim(),
-        geojsonStr,
-        createdAt: serverTimestamp()
-      });
-    });
-
-    map.on(L.Draw.Event.EDITED, async (e) => {
-      if (!FARM) return;
-      const updates = [];
-      e.layers.eachLayer(l => {
-        const fid = l.options._fid;
-        if (!fid) return;
-        updates.push(updateDoc(doc(db, "farms", FARM, "features", fid), {
-          geojsonStr: JSON.stringify(l.toGeoJSON())
-        }));
-      });
-      await Promise.all(updates);
-    });
-
-    map.on(L.Draw.Event.DELETED, async (e) => {
-      if (!FARM) return;
-      const dels = [];
-      e.layers.eachLayer(l => {
-        const fid = l.options._fid;
-        if (fid) dels.push(deleteDoc(doc(db, "farms", FARM, "features", fid)));
-      });
-      await Promise.all(dels);
-    });
-
-    // ---------- Calendar ----------
-    let calendar;
-
-    function initCalendar(){
-      calendar = new FullCalendar.Calendar(document.getElementById("cal"), {
-        initialView: "dayGridMonth",
-        height: "auto",
-        headerToolbar: {
-          left: "prev,next today",
-          center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay"
-        },
-        eventClick: (info) => {
-          const t = tasks.find(x => x.id === info.event.id);
-          if (!t) return;
-          alert(
-            `Titel: ${t.title}\nDatum: ${t.date || "—"}\nPerson: ${t.worker || "—"}\nOrt: ${t.place || "—"}\nPriorität: ${t.prio}\n\nInfos:\n${t.info || ""}`
-          );
-        }
-      });
-      calendar.render();
-    }
-
-    function refreshCalendar(){
-      if (!calendar) return;
-      calendar.removeAllEvents();
-      for (const t of tasks){
-        if (!t.date) continue;
-        calendar.addEvent({
-          id: t.id,
-          title: t.title + (t.worker ? ` (${t.worker})` : ""),
-          start: t.date,
-          allDay: true
-        });
-      }
-    }
-
-    // ---------- Live listeners ----------
-    let unsubscribers = [];
-
-    function stopListeners(){
-      unsubscribers.forEach(u => u());
-      unsubscribers = [];
-    }
-
-    function startListeners(){
-      stopListeners();
-      if (!FARM) return;
-
-      // tasks
-      unsubscribers.push(onSnapshot(
-        query(tasksCol(), orderBy("createdAt","desc")),
-        (snap) => {
-          tasks = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-          renderTasks();
-        }
-      ));
-
-      // animals
-      unsubscribers.push(onSnapshot(
-        query(animalsCol(), orderBy("createdAt","desc")),
-        (snap) => {
-          animals = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-          renderAnimals();
-        }
-      ));
-
-      // notes
-      unsubscribers.push(onSnapshot(notesDoc(), (snap) => {
-        const data = snap.data();
-        $("notesArea").value = data?.text || "";
-      }));
-
-      // features
-      unsubscribers.push(onSnapshot(
-        query(featuresCol(), orderBy("createdAt","desc")),
-        (snap) => {
-          features = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-          clearDrawn();
-          for (const f of features) {
-            if (f.geojsonStr) addFeatureToMap(f);
-          }
-          renderFeatureList();
-        }
-      ));
-    }
-
-    // ---------- Boot ----------
-    initCalendar();
-
-    const initialFarm = getFarmFromUrlOrStorage();
-    if (initialFarm){
-      $("farmId").value = initialFarm;
-      FARM = initialFarm;
-      startListeners();
-    } else {
-      showView("dashboard");
-    }
-  </script>
 </body>
 </html>
