@@ -5,10 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>AgrarPlan Pro</title>
 
-  <!-- Leaflet + Draw -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
-
   <!-- FullCalendar -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
 
@@ -45,14 +41,6 @@
     .task button{ padding:8px 10px; border:0; border-radius:10px; cursor:pointer; margin-right:8px; }
     .ok{ background:#dff3e7; }
     .del{ background:#ffe2e2; }
-    #map{ height:540px; border-radius:14px; }
-    .list{ margin-top:10px; }
-    .list-item{
-      display:flex; gap:10px; align-items:center; justify-content:space-between;
-      padding:10px; border-radius:12px; background:#f7faf8; margin-top:8px;
-    }
-    .list-item .small{ font-size:12px; color:var(--muted); }
-    .list-item button{ padding:8px 10px; border:0; border-radius:10px; cursor:pointer; background:#ffe2e2; }
     #cal{ background:#fff; border-radius:14px; padding:10px; }
   </style>
 </head>
@@ -60,14 +48,10 @@
 <body>
   <div class="sidebar">
     <h1>🌾 AgrarPlan Pro</h1>
-    <small>Live-Sync • Schweiz • Satellit • Flächen • Kalender</small>
+    <small>Aufträge • Kalender • Live-Sync</small>
 
-    <button class="navbtn" onclick="showView('dashboard')">📊 Dashboard</button>
     <button class="navbtn" onclick="showView('tasks')">📋 Aufträge</button>
     <button class="navbtn" onclick="showView('calendar')">📅 Kalender</button>
-    <button class="navbtn" onclick="showView('map')">🛰 Karte</button>
-    <button class="navbtn" onclick="showView('animals')">🐄 Tiere</button>
-    <button class="navbtn" onclick="showView('notes')">📝 Notizen</button>
   </div>
 
   <div class="content">
@@ -77,25 +61,7 @@
       <button class="navbtn" style="width:auto" onclick="copyShareLink()">🔗 Link teilen</button>
     </div>
 
-    <section id="view-dashboard">
-      <h2>📊 Dashboard</h2>
-      <div class="row">
-        <div class="card" style="flex:1; min-width:240px;">
-          <h2>Aufträge</h2>
-          <div id="statTasks">–</div>
-        </div>
-        <div class="card" style="flex:1; min-width:240px;">
-          <h2>Karte</h2>
-          <div id="statMap">–</div>
-        </div>
-        <div class="card" style="flex:1; min-width:240px;">
-          <h2>Tiere</h2>
-          <div id="statAnimals">–</div>
-        </div>
-      </div>
-    </section>
-
-    <section id="view-tasks" class="hide">
+    <section id="view-tasks">
       <h2>📋 Aufträge</h2>
       <div class="row">
         <div class="card" style="flex:1; min-width:260px;">
@@ -111,6 +77,9 @@
           </select>
           <textarea id="tInfo" placeholder="Weitere Infos…"></textarea>
           <button class="navbtn" onclick="createTask()">Speichern</button>
+          <div class="meta">
+            Tipp: Nur Aufträge mit Datum erscheinen im Kalender.
+          </div>
         </div>
 
         <div class="card" style="flex:2; min-width:300px;">
@@ -123,56 +92,18 @@
     <section id="view-calendar" class="hide">
       <h2>📅 Kalender</h2>
       <div id="cal"></div>
-    </section>
-
-    <section id="view-map" class="hide">
-      <h2>🛰 Karte Schweiz (Satellit + Flächen)</h2>
-      <div class="row">
-        <div class="card" style="flex:2; min-width:320px;">
-          <div id="map"></div>
-          <div class="meta">
-            Zeichnen: Marker/Fläche über Tools links oben. Löschen: Papierkorb-Tool oder Liste rechts.
-          </div>
-        </div>
-        <div class="card" style="flex:1; min-width:260px;">
-          <h2>🧾 Objekte</h2>
-          <div id="featureList" class="list"></div>
-        </div>
+      <div class="meta">
+        Alle Aufträge mit Datum werden automatisch angezeigt. Klick auf einen Eintrag zeigt Details.
       </div>
-    </section>
-
-    <section id="view-animals" class="hide">
-      <h2>🐄 Tiere & Aufgaben</h2>
-      <div class="row">
-        <div class="card" style="flex:1; min-width:260px;">
-          <h2>➕ Tiergruppe</h2>
-          <input id="aType" placeholder="Tierart (z.B. Kühe, Hühner)" />
-          <textarea id="aTasks" placeholder="Was muss man machen?"></textarea>
-          <button class="navbtn" onclick="addAnimal()">Speichern</button>
-        </div>
-        <div class="card" style="flex:2; min-width:300px;">
-          <h2>📌 Liste</h2>
-          <div id="animalList"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="view-notes" class="hide">
-      <h2>📝 Notizen</h2>
-      <textarea id="notesArea" placeholder="Allgemeine Notizen…"></textarea>
-      <button class="navbtn" onclick="saveNotes()">Speichern</button>
-      <div class="meta">Notizen werden live synchronisiert.</div>
     </section>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
     import {
-      initializeFirestore, collection, doc, setDoc, addDoc, deleteDoc, updateDoc,
+      initializeFirestore, collection, doc, addDoc, deleteDoc, updateDoc,
       onSnapshot, query, orderBy, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
@@ -189,7 +120,7 @@
 
     const app = initializeApp(firebaseConfig);
 
-    // ✅ robust (wie dein funktionierender Test)
+    // Robust (Schulnetz etc.)
     const db = initializeFirestore(app, {
       experimentalForceLongPolling: true,
       useFetchStreams: false
@@ -197,13 +128,12 @@
 
     // Navigation
     window.showView = (name) => {
-      for (const s of ["dashboard","tasks","calendar","map","animals","notes"]) {
-        $("view-"+s).classList.toggle("hide", s !== name);
-      }
-      if (name === "map") setTimeout(() => map.invalidateSize(), 150);
+      $("view-tasks").classList.toggle("hide", name !== "tasks");
+      $("view-calendar").classList.toggle("hide", name !== "calendar");
+      if (name === "calendar" && calendar) setTimeout(() => calendar.updateSize(), 100);
     };
 
-    // Farm
+    // Farm Handling
     let FARM = "";
     function getFarmFromUrlOrStorage(){
       const url = new URL(window.location.href);
@@ -235,196 +165,13 @@
 
     // Paths
     const tasksCol = () => collection(db, "farms", FARM, "tasks");
-    const animalsCol = () => collection(db, "farms", FARM, "animals");
-    const featuresCol = () => collection(db, "farms", FARM, "features");
-    const notesDoc = () => doc(db, "farms", FARM, "notes", "main");
 
-    // Tasks
-    let tasks = [];
-    window.createTask = async () => {
-      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
-      const title = ($("tTitle").value || "").trim();
-      if (!title) return alert("Titel fehlt.");
-
-      await addDoc(tasksCol(), {
-        title,
-        date: $("tDate").value || "",
-        worker: ($("tWorker").value || "").trim(),
-        place: ($("tPlace").value || "").trim(),
-        prio: $("tPrio").value,
-        info: ($("tInfo").value || "").trim(),
-        done: false,
-        createdAt: serverTimestamp()
-      });
-
-      $("tTitle").value = "";
-      $("tInfo").value = "";
-    };
-
-    async function toggleTask(id, current){
-      await updateDoc(doc(db, "farms", FARM, "tasks", id), { done: !current });
-    }
-    async function removeTask(id){
-      await deleteDoc(doc(db, "farms", FARM, "tasks", id));
-    }
-
+    // Helpers
     function escapeHtml(str){
       return (str ?? "").toString()
         .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
         .replaceAll('"',"&quot;").replaceAll("'","&#039;");
     }
-
-    function renderTasks(){
-      const wrap = $("taskList");
-      wrap.innerHTML = "";
-      for (const t of tasks){
-        const div = document.createElement("div");
-        div.className = "task" + (t.done ? " done" : "");
-        div.innerHTML = `
-          <b>${escapeHtml(t.title)}</b>
-          <div class="meta">📅 ${escapeHtml(t.date || "—")} · 👤 ${escapeHtml(t.worker || "—")} · 📍 ${escapeHtml(t.place || "—")} · ⭐ ${escapeHtml(t.prio)}</div>
-          <div class="meta">${escapeHtml(t.info || "")}</div>
-          <div style="margin-top:8px;">
-            <button class="ok" data-id="${t.id}">${t.done ? "Wieder offen" : "Erledigt"}</button>
-            <button class="del" data-del="${t.id}">Löschen</button>
-          </div>
-        `;
-        wrap.appendChild(div);
-      }
-      wrap.querySelectorAll("button.ok").forEach(b=>{
-        b.onclick = ()=> {
-          const id = b.getAttribute("data-id");
-          const t = tasks.find(x=>x.id===id);
-          if (t) toggleTask(id, t.done);
-        };
-      });
-      wrap.querySelectorAll("button.del").forEach(b=>{
-        b.onclick = ()=> removeTask(b.getAttribute("data-del"));
-      });
-
-      const done = tasks.filter(t=>t.done).length;
-      $("statTasks").innerHTML = `Gesamt: <b>${tasks.length}</b><br>Erledigt: <b>${done}</b><br>Offen: <b>${tasks.length - done}</b>`;
-      refreshCalendar();
-    }
-
-    // Notes
-    window.saveNotes = async () => {
-      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
-      await setDoc(notesDoc(), { text: $("notesArea").value || "", updatedAt: serverTimestamp() }, { merge: true });
-      alert("Notizen gespeichert.");
-    };
-
-    // Animals
-    let animals = [];
-    window.addAnimal = async () => {
-      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
-      const type = ($("aType").value || "").trim();
-      if (!type) return alert("Tierart fehlt.");
-      await addDoc(animalsCol(), { type, tasks: ($("aTasks").value || "").trim(), createdAt: serverTimestamp() });
-      $("aType").value = ""; $("aTasks").value = "";
-    };
-    async function removeAnimal(id){ await deleteDoc(doc(db, "farms", FARM, "animals", id)); }
-    function renderAnimals(){
-      const wrap = $("animalList");
-      wrap.innerHTML = "";
-      for (const a of animals){
-        const div = document.createElement("div");
-        div.className = "list-item";
-        div.innerHTML = `
-          <div>
-            <b>${escapeHtml(a.type)}</b>
-            <div class="small">${escapeHtml(a.tasks || "")}</div>
-          </div>
-          <button data-del="${a.id}">Löschen</button>
-        `;
-        wrap.appendChild(div);
-      }
-      wrap.querySelectorAll("button[data-del]").forEach(b=>{
-        b.onclick = ()=> removeAnimal(b.getAttribute("data-del"));
-      });
-      $("statAnimals").innerHTML = `Tiergruppen: <b>${animals.length}</b>`;
-    }
-
-    // Map Switzerland
-    const map = L.map("map").setView([46.8, 8.3], 8);
-
-    L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { maxZoom: 19, attribution: "Tiles © Esri" }
-    ).addTo(map);
-
-    const drawn = new L.FeatureGroup(); map.addLayer(drawn);
-
-    map.addControl(new L.Control.Draw({
-      edit: { featureGroup: drawn, remove: true },
-      draw: { polyline:false, rectangle:false, circle:false, circlemarker:false }
-    }));
-
-    let features = [];
-    function clearDrawn(){ drawn.clearLayers(); }
-
-    function addFeatureToMap(featureDoc){
-      const gj = JSON.parse(featureDoc.geojsonStr);
-      const layerGroup = L.geoJSON(gj);
-      layerGroup.eachLayer(l => {
-        l.options._fid = featureDoc.id;
-        l.bindPopup(`<b>${escapeHtml(featureDoc.name || "")}</b><br>${escapeHtml(featureDoc.kind)}`);
-        drawn.addLayer(l);
-      });
-    }
-
-    function renderFeatureList(){
-      const wrap = $("featureList");
-      wrap.innerHTML = "";
-      for (const f of features){
-        const div = document.createElement("div");
-        div.className = "list-item";
-        div.innerHTML = `
-          <div>
-            <b>${escapeHtml(f.name || f.kind)}</b>
-            <div class="small">${escapeHtml(f.kind)}</div>
-          </div>
-          <button data-del="${f.id}">Löschen</button>
-        `;
-        wrap.appendChild(div);
-      }
-      wrap.querySelectorAll("button[data-del]").forEach(b=>{
-        b.onclick = ()=> deleteDoc(doc(db, "farms", FARM, "features", b.getAttribute("data-del")));
-      });
-      $("statMap").innerHTML = `Objekte: <b>${features.length}</b>`;
-    }
-
-    map.on(L.Draw.Event.CREATED, async (e) => {
-      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
-      const layer = e.layer;
-      const kind = (e.layerType === "polygon") ? "flaeche" : "marker";
-      const name = prompt(kind === "flaeche" ? "Name der Fläche:" : "Name der Markierung:") || "";
-      const geojsonStr = JSON.stringify(layer.toGeoJSON()); // ✅ fixes nested arrays
-      await addDoc(featuresCol(), { kind, name: name.trim(), geojsonStr, createdAt: serverTimestamp() });
-    });
-
-    map.on(L.Draw.Event.EDITED, async (e) => {
-      if (!FARM) return;
-      const updates = [];
-      e.layers.eachLayer(l => {
-        const fid = l.options._fid;
-        if (!fid) return;
-        updates.push(updateDoc(doc(db, "farms", FARM, "features", fid), {
-          geojsonStr: JSON.stringify(l.toGeoJSON())
-        }));
-      });
-      await Promise.all(updates);
-    });
-
-    map.on(L.Draw.Event.DELETED, async (e) => {
-      if (!FARM) return;
-      const dels = [];
-      e.layers.eachLayer(l => {
-        const fid = l.options._fid;
-        if (fid) dels.push(deleteDoc(doc(db, "farms", FARM, "features", fid)));
-      });
-      await Promise.all(dels);
-    });
 
     // Calendar
     let calendar;
@@ -436,50 +183,132 @@
         eventClick: (info) => {
           const t = tasks.find(x => x.id === info.event.id);
           if (!t) return;
-          alert(`Titel: ${t.title}\nDatum: ${t.date || "—"}\nPerson: ${t.worker || "—"}\nOrt: ${t.place || "—"}\nPriorität: ${t.prio}\n\nInfos:\n${t.info || ""}`);
+          alert(
+            "Titel: " + (t.title || "") + "\n" +
+            "Datum: " + (t.date || "—") + "\n" +
+            "Person: " + (t.worker || "—") + "\n" +
+            "Ort: " + (t.place || "—") + "\n" +
+            "Priorität: " + (t.prio || "—") + "\n\n" +
+            "Infos:\n" + (t.info || "")
+          );
         }
       });
       calendar.render();
     }
+
     function refreshCalendar(){
       if (!calendar) return;
+
+      // WICHTIG: wirklich ALLE Events neu setzen
       calendar.removeAllEvents();
+
       for (const t of tasks){
-        if (!t.date) continue;
-        calendar.addEvent({ id:t.id, title: t.title, start:t.date, allDay:true });
+        if (!t.date) continue; // nur Tasks mit Datum
+        calendar.addEvent({
+          id: t.id,
+          title: t.title || "(Ohne Titel)",
+          start: t.date,
+          allDay: true
+        });
       }
     }
+
     initCalendar();
 
-    // Live listeners
-    let unsubscribers = [];
-    function stopListeners(){ unsubscribers.forEach(u=>u()); unsubscribers=[]; }
+    // Tasks (Live)
+    let tasks = [];
+    let unsub = null;
+
+    function renderTasks(){
+      const wrap = $("taskList");
+      wrap.innerHTML = "";
+
+      // Optional: Sortieren (falls createdAt fehlt, trotzdem stabil)
+      const sorted = [...tasks].sort((a,b)=>{
+        const ad = (a.date || "");
+        const bd = (b.date || "");
+        if (ad !== bd) return bd.localeCompare(ad); // neuere Datums zuerst
+        const at = a._createdAtMs || 0;
+        const bt = b._createdAtMs || 0;
+        return bt - at;
+      });
+
+      for (const t of sorted){
+        const div = document.createElement("div");
+        div.className = "task" + (t.done ? " done" : "");
+        div.innerHTML = `
+          <b>${escapeHtml(t.title)}</b>
+          <div class="meta">📅 ${escapeHtml(t.date || "—")} · 👤 ${escapeHtml(t.worker || "—")} · 📍 ${escapeHtml(t.place || "—")} · ⭐ ${escapeHtml(t.prio || "normal")}</div>
+          <div class="meta">${escapeHtml(t.info || "")}</div>
+          <div style="margin-top:8px;">
+            <button class="ok" data-id="${t.id}">${t.done ? "Wieder offen" : "Erledigt"}</button>
+            <button class="del" data-del="${t.id}">Löschen</button>
+          </div>
+        `;
+        wrap.appendChild(div);
+      }
+
+      wrap.querySelectorAll("button.ok").forEach(b=>{
+        b.onclick = async ()=> {
+          const id = b.getAttribute("data-id");
+          const t = tasks.find(x=>x.id===id);
+          if (!t) return;
+          await updateDoc(doc(db, "farms", FARM, "tasks", id), { done: !t.done });
+        };
+      });
+      wrap.querySelectorAll("button.del").forEach(b=>{
+        b.onclick = async ()=> {
+          const id = b.getAttribute("data-del");
+          await deleteDoc(doc(db, "farms", FARM, "tasks", id));
+        };
+      });
+
+      // Kalender IMMER aktualisieren
+      refreshCalendar();
+    }
 
     function startListeners(){
-      stopListeners();
       if (!FARM) return;
+      if (unsub) unsub();
 
-      unsubscribers.push(onSnapshot(query(tasksCol(), orderBy("createdAt","desc")), (snap)=>{
-        tasks = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+      // Falls createdAt fehlt, kann orderBy Probleme machen.
+      // Darum: wir nehmen nur orderBy, wenn du createdAt konsequent setzt.
+      // -> Du setzt createdAt beim Erstellen, also ist es ok.
+      // Wenn du alte manuelle Einträge ohne createdAt hast, einfach löschen oder createdAt hinzufügen.
+      const q = query(tasksCol(), orderBy("createdAt","desc"));
+
+      unsub = onSnapshot(q, (snap)=>{
+        tasks = snap.docs.map(d=>{
+          const data = d.data();
+          // createdAt als ms merken (falls vorhanden)
+          const ms = data.createdAt?.toMillis ? data.createdAt.toMillis() : 0;
+          return { id:d.id, ...data, _createdAtMs: ms };
+        });
         renderTasks();
-      }));
-
-      unsubscribers.push(onSnapshot(query(animalsCol(), orderBy("createdAt","desc")), (snap)=>{
-        animals = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-        renderAnimals();
-      }));
-
-      unsubscribers.push(onSnapshot(notesDoc(), (snap)=>{
-        $("notesArea").value = snap.data()?.text || "";
-      }));
-
-      unsubscribers.push(onSnapshot(query(featuresCol(), orderBy("createdAt","desc")), (snap)=>{
-        features = snap.docs.map(d => ({ id:d.id, ...d.data() }));
-        clearDrawn();
-        for (const f of features) if (f.geojsonStr) addFeatureToMap(f);
-        renderFeatureList();
-      }));
+      }, (err)=>{
+        alert("Fehler beim Laden der Aufträge: " + err.message);
+      });
     }
+
+    window.createTask = async () => {
+      if (!FARM) return alert("Bitte zuerst Betriebscode laden.");
+      const title = ($("tTitle").value || "").trim();
+      if (!title) return alert("Titel fehlt.");
+
+      await addDoc(tasksCol(), {
+        title,
+        date: $("tDate").value || "",
+        worker: ($("tWorker").value || "").trim(),
+        place: ($("tPlace").value || "").trim(),
+        prio: $("tPrio").value || "normal",
+        info: ($("tInfo").value || "").trim(),
+        done: false,
+        createdAt: serverTimestamp()
+      });
+
+      $("tTitle").value = "";
+      $("tInfo").value = "";
+    };
 
     // Boot
     const initialFarm = getFarmFromUrlOrStorage();
@@ -487,8 +316,6 @@
       $("farmId").value = initialFarm;
       FARM = initialFarm;
       startListeners();
-    } else {
-      showView("dashboard");
     }
   </script>
 </body>
